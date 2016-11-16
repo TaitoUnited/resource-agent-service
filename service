@@ -1,0 +1,73 @@
+#!/bin/bash
+
+param="$1"
+
+meta_data() {
+  cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="service" version="0.1">
+  <version>0.1</version>
+  <longdesc lang="en">service ocf resource agent for running systemd services, supports timers</longdesc>
+  <shortdesc lang="en">Run a systemd service</shortdesc>
+<parameters>
+<parameter name="service_name" unique="0" required="1">
+<longdesc lang="en">
+The name of the service file, if no extension is provided .service is assumed
+</longdesc>
+<shortdesc lang="en">Service name</shortdesc>
+<content type="string"/>
+</parameter>
+</parameters>
+  <actions>
+    <action name="start"        timeout="20" />
+    <action name="stop"         timeout="20" />
+    <action name="monitor"      timeout="20"
+                                interval="10" depth="0" />
+    <action name="meta-data"    timeout="5" />
+  </actions>
+</resource-agent>
+END
+}
+
+if [ "start" == "$param" ] ; then
+  systemctl start "$OCF_RESKEY_service_name"
+  exit 0
+elif [ "stop" == "$param" ] ; then
+  systemctl stop "$OCF_RESKEY_service_name"
+  exit 0
+elif [ "status" == "$param" ] ; then
+  systemctl status "$OCF_RESKEY_service_name" 2>&1 > /dev/null
+  RETURN_CODE=$?
+
+  if [ $RETURN_CODE -eq 0 ] ; then
+    echo "Running"
+    exit 0
+  elif [ $RETURN_CODE -eq 3 ]; then
+    echo "Not running"
+    exit 1
+  else
+    echo "Unknown status"
+    exit 1
+  fi
+elif [ "monitor" == "$param" ] ; then
+  systemctl status "$OCF_RESKEY_service_name" 2>&1 > /dev/null
+  RETURN_CODE=$?
+
+  if [ $RETURN_CODE -eq 0 ] ; then
+    echo "Running"
+    exit 0
+  elif [ $RETURN_CODE -eq 3 ]; then
+    echo "Not running"
+    exit 7
+  else
+    echo "Unknown status"
+    exit 1
+  fi
+elif [ "meta-data" == "$param" ] ; then
+  meta_data
+  exit 0
+else
+  echo "no such command $param"
+  exit 1
+fi
